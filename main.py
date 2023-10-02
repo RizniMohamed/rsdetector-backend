@@ -1,4 +1,4 @@
-from fastapi import FastAPI,UploadFile, File
+from fastapi import FastAPI,UploadFile, File,WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from fastapi.responses import RedirectResponse
@@ -36,3 +36,16 @@ async def process(file: UploadFile):
     result = detection(img)
     return {"status": True  if result else False}
 
+@app.websocket("/ws")
+async def process(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_bytes()
+        nparr = np.frombuffer(data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        result = detection(img) 
+        if result:
+            response = {"message": "{} {}".format(result[0],result[1])}
+        else:
+            response = {"message": "No sign detected"}
+        await websocket.send_json(response)

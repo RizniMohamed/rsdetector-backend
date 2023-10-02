@@ -33,7 +33,7 @@ def crop_cls_image(x1, y1, x2, y2,resized_frame):
 def detection(frame):
 
   resized_frame = cv2.resize(frame, (640, 640))
-  results = final_model_detection(resized_frame,conf=0.5)
+  results = final_model_detection(resized_frame,conf=0.9)
 
 
   for r in results:
@@ -43,6 +43,10 @@ def detection(frame):
       for c in r.boxes:
         conf =  round(float(c.conf),2)
         cls =  names[int(c.cls)]
+        # cv2.imwrite( 
+        #             './temp/{} {}.jpg'.format(cls, conf),
+        #             cv2.resize(crop_cls_image(x1, y1, x2, y2,resized_frame), (64, 64)) 
+        #             )
         return (cls,conf, crop_cls_image(x1, y1, x2, y2,resized_frame),results)
     return None
 
