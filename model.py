@@ -1,8 +1,7 @@
 from ultralytics import YOLO
-from PIL import Image
-from ultralytics import YOLO
+# from PIL import Image
 import cv2
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 final_model_detection = YOLO('./yolo.pt')
 names = final_model_detection.names
