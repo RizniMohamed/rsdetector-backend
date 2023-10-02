@@ -12,7 +12,7 @@ app = FastAPI()
 origins = [
     "http://localhost:3000",  # React
     "http://127.0.0.1:3000",  # React
-    "https://rsdetector.netlify.app/", # netlify
+    "https://rsdetector.netlify.app", # netlify
 ]
 
 app.add_middleware(
