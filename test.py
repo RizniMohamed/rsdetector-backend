@@ -9,10 +9,9 @@ def run_tests():
         "test_get_sign_text.py",
         "test_detection.py"
         ]
-    test_files = ["test_detection.py"]
 
     # Run pytest for the specified test files
-    pytest.main(test_files + ["-p", "no:warnings","-v"])
+    pytest.main(test_files + ["-p", "no:warnings","-v","--html=report.html","--self-contained-html"])
 
 if __name__ == "__main__":
     run_tests()

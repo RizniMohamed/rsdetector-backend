@@ -10,3 +10,4 @@ httpx
 pandas
 numpy
 pytest-xdist
+pytest-html
