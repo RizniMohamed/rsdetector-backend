@@ -3,3 +3,10 @@ uvicorn
 ultralytics
 python-multipart
 websockets
+scikit-image
+tensorflow
+pytest
+httpx
+pandas
+numpy
+pytest-xdist

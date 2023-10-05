@@ -1,0 +1,12 @@
+id,code,name,type,desc
+0,PRS-01,Stop to give priority to vehicles on the adjacent road,Priority Signs,Notification to drivers on a road that they must stop and give priority to vehicles on the adjacent road which the road intersects
+1,OSD-01,Pedestrian Crossing,Other Signs Useful For Drivers,"Pedestrian Crossing Sign is used at a Pedestrian Crossing where pedestrians have priority over vehicular traffic. Vehicular traffic is required to stop and give way to the pedestrians, crossing the road"
+2,DWS-32,Pedestrian Crossing Ahead,Danger Warning Signs,A place on a road ahead where pedestrians cross the carriageway
+3,RSS-07,Speed Limit for heavy vehicles in non built-up areas,Restrictive Signs,"Vehicle categories - Motor coaches and motor lorries are prohibited from travelling at speed exceeding speed limit indicated, applicable for nonbuilt up areas."
+4,OSD-06,Bus Stop,Other Signs Useful For Drivers,To indicate a place for the halting of buses.
+5,DWS-33,Children present/ crossing Ahead,Danger Warning Signs,A place along a road ahead where a school or playground is located in the vicinity and where children stay on the road or cross frequently.
+6,PHS-23,No Parking,Prohibitory Signs,Parking of vehicles is prohibited on the side of the road where the sign is situated.
+7,DWS-02,Right Bend Ahead,Danger Warning Signs,A place on a road ahead where there is a sharp bend to the right.
+8,DWS-17,Traffic From Left Merges Ahead,Danger Warning Signs,A junction ahead where a side road on the left merges with the major road.
+9,DWS-19,Traffic From Right Merges Ahead,Danger Warning Signs,A junction ahead where a side road on the right merges with the major road.
+10,DWS-26,Light Signals Ahead,Danger Warning Signs,An intersection ahead controlled by Traffic Light Signals.
