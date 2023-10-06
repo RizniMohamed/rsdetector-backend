@@ -11,3 +11,5 @@ pandas
 numpy
 pytest-xdist
 pytest-html
+pycryptodome
+python-jose
