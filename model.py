@@ -5,6 +5,9 @@ from skimage import exposure
 from tensorflow.keras.models import load_model
 from tensorflow.keras.metrics import Recall, Precision
 from ultralytics import YOLO
+from database import get_text,store_processing_results
+from io import BytesIO
+from logger import log_error
 
 # Constants
 YOLO_MODEL_PATH = './yolo.pt'
@@ -40,20 +43,16 @@ def crop_cls_image(x1, y1, x2, y2, resized_frame):
 
 def recognition(crop_img):
     """Recognize the cropped image."""
-    print(RECOGNITION_MODEL_PATH)
     crop_resize = cv2.resize(crop_img, (64, 64))
     crop_resize_rgb = cv2.cvtColor(crop_resize, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB
     img_array = np.expand_dims(crop_resize_rgb, axis=0) / 255.0
     predictions = final_model_recognition.predict(img_array)
     class_index = np.argmax(predictions)
-    return LABELS[class_index]
+    confidence_score = predictions[0][class_index]
+    return LABELS[class_index],confidence_score
 
-def get_text(label):
-    """Retrieve text information for a given label."""
-    sign_info = pd.read_csv(SIGN_DATA_PATH)
-    return sign_info[sign_info.id == int(label)].values[0][2]
 
-def detection(frame):
+def detection(frame,img_id):
     """Detect and recognize objects in the frame."""
     clahe_img = exposure.equalize_adapthist(frame, clip_limit=0.1)
     clahe_img_uint8 = (clahe_img * 255).astype('uint8')
@@ -64,11 +63,26 @@ def detection(frame):
     for r in results:
         if r:
             for b in r.boxes:
-                x1, y1, x2, y2 = b.xyxy.cpu().numpy().astype(int)
+                x1, y1, x2, y2 = b.xyxy.cpu().numpy().astype(int)[0]
                 cropped_image = crop_cls_image(x1, y1, x2, y2, resized_o_frame)
                 clahe_img = exposure.equalize_adapthist(cropped_image, clip_limit=0.03)
                 cv2.imwrite(f'./temp/{b.cls} {b.conf}.jpg', cropped_image)
-                label = recognition((clahe_img * 255).astype('uint8'))
+                label,confidence_score = recognition((clahe_img * 255).astype('uint8'))
                 label_texts.append(get_text(label))
+                
+                
+                # Convert the cropped image to bytes 
+                is_success, buffer = cv2.imencode(".jpg", cropped_image)
+                io_buf = BytesIO(buffer)
+                cropped_image_bytes = io_buf.read()
+                
+                store_processing_results(img_id,{
+                    'detected_label': get_text(int(b.cls)),
+                    'recognized_label': get_text(label),
+                    'detection_confidence_score': float(b.conf),
+                    'recognition_confidence_score': float(confidence_score),
+                    'cropped_image': cropped_image_bytes
+                })
+                
             return " and ".join(label_texts)
     return None
