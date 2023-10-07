@@ -1,13 +1,11 @@
-import cv2
 import numpy as np
-import pandas as pd
 from skimage import exposure
 from tensorflow.keras.models import load_model
 from tensorflow.keras.metrics import Recall, Precision
 from ultralytics import YOLO
 from database import get_text,store_processing_results
 from io import BytesIO
-from logger import log_error
+from PIL import Image
 
 # Constants
 YOLO_MODEL_PATH = './yolo.pt'
@@ -36,28 +34,29 @@ def crop_cls_image(x1, y1, x2, y2, resized_frame):
     """Crop and resize the image based on bounding box coordinates."""
     crop_size = 150
     center_x, center_y = (x1 + x2) // 2, (y1 + y2) // 2
-    crop_x1, crop_x2 = max(center_x - crop_size // 2, 0), min(center_x + crop_size // 2, resized_frame.shape[1])
-    crop_y1, crop_y2 = max(center_y - crop_size // 2, 0), min(center_y + crop_size // 2, resized_frame.shape[0])
-    cropped_region = resized_frame[crop_y1:crop_y2, crop_x1:crop_x2]
-    return cv2.resize(cropped_region, (crop_size, crop_size))
+    crop_x1, crop_x2 = max(center_x - crop_size // 2, 0), min(center_x + crop_size // 2, resized_frame.size[0])
+    crop_y1, crop_y2 = max(center_y - crop_size // 2, 0), min(center_y + crop_size // 2, resized_frame.size[1])
+    cropped_region = resized_frame.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+    return cropped_region.resize((crop_size, crop_size))
 
 def recognition(crop_img):
     """Recognize the cropped image."""
-    crop_resize = cv2.resize(crop_img, (64, 64))
-    crop_resize_rgb = cv2.cvtColor(crop_resize, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB
-    img_array = np.expand_dims(crop_resize_rgb, axis=0) / 255.0
+    crop_img_pil = Image.fromarray(crop_img)
+    crop_resize = crop_img_pil.resize((64, 64))
+    crop_resize_rgb = crop_resize.convert('RGB')
+    img_array = np.array(crop_resize_rgb) / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
     predictions = final_model_recognition.predict(img_array)
     class_index = np.argmax(predictions)
     confidence_score = predictions[0][class_index]
     return LABELS[class_index],confidence_score
 
-
 def detection(frame,img_id):
     """Detect and recognize objects in the frame."""
-    clahe_img = exposure.equalize_adapthist(frame, clip_limit=0.1)
+    clahe_img = exposure.equalize_adapthist(np.array(frame), clip_limit=0.1)
     clahe_img_uint8 = (clahe_img * 255).astype('uint8')
-    resized_frame, resized_o_frame = cv2.resize(clahe_img_uint8, (640, 640)), cv2.resize(frame, (640, 640))
-    results = final_model_detection(resized_frame, conf=0.5)
+    resized_frame, resized_o_frame = Image.fromarray(clahe_img_uint8).resize((640, 640)), frame.resize((640, 640))
+    results = final_model_detection(np.array(resized_frame)[..., ::-1], conf=0.5) ## send as BGR for detection
 
     label_texts = []
     for r in results:
@@ -65,16 +64,19 @@ def detection(frame,img_id):
             for b in r.boxes:
                 x1, y1, x2, y2 = b.xyxy.cpu().numpy().astype(int)[0]
                 cropped_image = crop_cls_image(x1, y1, x2, y2, resized_o_frame)
-                clahe_img = exposure.equalize_adapthist(cropped_image, clip_limit=0.03)
-                cv2.imwrite(f'./temp/{b.cls} {b.conf}.jpg', cropped_image)
-                label,confidence_score = recognition((clahe_img * 255).astype('uint8'))
+                cropped_image_array = np.array(cropped_image)
+                clahe_img = exposure.equalize_adapthist(cropped_image_array, clip_limit=0.03)
+                
+                # Save cropped image to temp folder
+                cropped_image.save(f'./temp/{b.cls} {b.conf}.jpg')
+                
+                label, confidence_score = recognition((clahe_img * 255).astype('uint8'))
                 label_texts.append(get_text(label))
                 
-                
-                # Convert the cropped image to bytes 
-                is_success, buffer = cv2.imencode(".jpg", cropped_image)
-                io_buf = BytesIO(buffer)
-                cropped_image_bytes = io_buf.read()
+                # Convert the cropped image to bytes for storing in the database
+                temp_file = BytesIO()
+                cropped_image.save(temp_file, format='JPEG')
+                cropped_image_bytes = temp_file.getvalue()
                 
                 store_processing_results(img_id,{
                     'detected_label': get_text(int(b.cls)),

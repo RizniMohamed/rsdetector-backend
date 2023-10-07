@@ -9,7 +9,7 @@ SECRET_KEY = "mysecretkey"
 ALGORITHM = "HS256"
 
 def create_new_token():
-    expiration = datetime.utcnow() + timedelta(minutes=30)
+    expiration = datetime.utcnow() + timedelta(seconds=10)
     to_encode = {"exp": expiration}
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
