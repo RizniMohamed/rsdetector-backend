@@ -2,14 +2,13 @@ from fastapi import FastAPI, Header, HTTPException,UploadFile,BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from model import detection
+import cv2
 import numpy as np
 from jose import jwt
 from jwt import SECRET_KEY,ALGORITHM,create_new_token
 from database import store_image_metadata,update_processing_time
 import datetime
 from logger import log_error
-from PIL import Image
-import io
 
 app = FastAPI() 
 
@@ -38,7 +37,8 @@ async def process(file: UploadFile,background_tasks: BackgroundTasks):
     file.file.seek(0)
     
     contents = await file.read()
-    img = Image.open(io.BytesIO(contents)).convert('RGB')
+    nparr = np.fromstring(contents, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
     upload_timestamp = datetime.datetime.utcnow()
     file_type = file.content_type
@@ -85,8 +85,8 @@ async def get_secure_data(file: UploadFile, background_tasks: BackgroundTasks, a
         file.file.seek(0)
         
         contents = await file.read()
-        img = Image.open(io.BytesIO(contents)).convert('RGB')
-
+        nparr = np.fromstring(contents, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         upload_timestamp = datetime.datetime.utcnow()
         file_type = file.content_type

@@ -90,6 +90,6 @@ SAMPLE_IMAGES = [
 def test_recognition(image_path, expected_label):
     cropped_image = cv2.imread(image_path, cv2.IMREAD_COLOR)
     # clahe_img = exposure.equalize_adapthist(cropped_image, clip_limit=0.00)
-
-    assert recognition(cropped_image) == expected_label
+    cls, conf = recognition(cropped_image)
+    assert cls == expected_label
     # assert recognition((clahe_img * 255).astype('uint8')) == expected_label

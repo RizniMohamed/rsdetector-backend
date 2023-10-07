@@ -23,5 +23,4 @@ def test_get_text_known_labels(label, expected_text):
 
 def test_get_text_non_existent_label():
     non_existent_label = '999'  # Assuming '999' doesn't exist in your CSV
-    with pytest.raises(Exception):  # Assuming get_text raises an exception for non-existent labels
-        get_text(non_existent_label)
+    assert get_text(non_existent_label) == None
