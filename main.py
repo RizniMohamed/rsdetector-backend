@@ -1,22 +1,23 @@
-from fastapi import FastAPI, Header, HTTPException,UploadFile,BackgroundTasks
+from fastapi import FastAPI, Header, HTTPException,UploadFile,BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from model import detection
 import cv2
 import numpy as np
 from jose import jwt
-from jwt import SECRET_KEY,ALGORITHM,create_new_token
-from database import store_image_metadata,update_processing_time
+from jwt import SECRET_KEY,ALGORITHM,create_new_token,create_access_token
+from database import store_image_metadata,update_processing_time, store_user,get_user
 import datetime
 from logger import log_error
+from models import BaseModel,Token,TokenData,User,UserIn
+from auth import authenticate_user
 
 app = FastAPI() 
 
 origins = [
     "http://localhost:3000",  # React 
     "http://127.0.0.1:3000",  # React
-    "https://rsdetector.netlify.app", # netlify 
-    "https://1c65-112-134-198-70.ngrok-free.app"
+    "https://rsdetector.ngrok.app"
 ] 
 
 app.add_middleware(
@@ -62,7 +63,6 @@ async def process(file: UploadFile,background_tasks: BackgroundTasks):
     else: 
         response = {"message": "No sign detected"}
     return response
-
 
 @app.get("/V1/token")
 async def get_new_token():
@@ -118,3 +118,29 @@ async def get_secure_data(file: UploadFile, background_tasks: BackgroundTasks, a
             error_message = f"Unexpected error: {str(e)}"
         log_error(error_message)
         raise HTTPException(status_code=500, detail=error_message)  # Internal Server Error
+
+@app.post("/V1/register")
+async def register_user(user: User):
+    try:
+        res = store_user(user.password,user.email)
+        if res == 0:
+            return {"status":0, "message": "User created successfully"}
+        elif res == 1:
+            return {"status":1,"message": "Email already in use"}
+        elif res == 2:
+            return {"status":2,"message": "Unable to create the user, contact rsdetector team"}
+    except Exception as e :
+        log_error("Unable to create user")
+        print(e)
+        raise HTTPException(status_code=500, detail="Unable to create user")  # Internal Server Error
+
+@app.post("/V1/login")
+async def login_for_access_token(form_data: UserIn):
+    user = authenticate_user( form_data.email, form_data.password)
+    if not user:
+        return {"status": 1 , "message": "Username or Password mismtach"}
+    access_token_expires = datetime.timedelta(minutes=15)
+    access_token = create_access_token(
+        data={"sub": user[2]}, expires_delta=access_token_expires
+    )
+    return {"status": 0,"message": "Login success" ,"access_token": access_token, "token_type": "bearer"}

@@ -57,7 +57,7 @@ def detection(frame,img_id):
     clahe_img = exposure.equalize_adapthist(frame, clip_limit=0.1)
     clahe_img_uint8 = (clahe_img * 255).astype('uint8')
     resized_frame, resized_o_frame = cv2.resize(clahe_img_uint8, (640, 640)), cv2.resize(frame, (640, 640))
-    results = final_model_detection(resized_frame, conf=0.5)
+    results = final_model_detection(resized_o_frame, conf=0.5)
 
     label_texts = []
     for r in results:

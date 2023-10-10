@@ -1,5 +1,6 @@
 import psycopg2
 from psycopg2 import pool
+import bcrypt
 
 class Database:
     __connection_pool = None
@@ -162,3 +163,68 @@ def store_error_in_db(error_message, timestamp, file_name, function_name):
         # Return the connection back to the pool
         Database.return_connection(connection)
     
+
+def store_user(password, email):
+    
+    # Get a database connection from the connection pool
+    connection = Database.get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            # Hash the password
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+            # Prepare SQL query
+            query = """
+                INSERT INTO public.users (
+                    password,
+                    email
+                )
+                VALUES (%s, %s)
+            """
+
+            # Execute SQL query
+            cursor.execute(query, (hashed_password, email))
+
+            # Commit the transaction
+            connection.commit()
+            
+            return 0
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        # Optionally, rollback the transaction on error
+        connection.rollback()
+        if "duplicate" in str(e):
+            return 1
+        else:
+            return 2
+
+    finally:
+        # Return the connection back to the pool
+        Database.return_connection(connection)
+        
+    
+def get_user(email):
+    # Get a database connection from the connection pool
+    connection = Database.get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            # Prepare SQL query
+            query = """
+                SELECT * FROM public.users
+                WHERE email = %s;
+            """
+            # Execute SQL query
+            cursor.execute(query, (email,))
+            # Fetch one record
+            user = cursor.fetchone()
+            return user
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+    finally:
+        # Return the connection back to the pool
+        Database.return_connection(connection)
