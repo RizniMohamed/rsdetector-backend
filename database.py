@@ -44,7 +44,7 @@ def get_text(label):
         # Return the connection back to the pool
         Database.return_connection(connection)
         
-def store_image_metadata(upload_timestamp, processing_time, file_size, file_type):
+def store_image_metadata(upload_timestamp, processing_time, file_size, file_type,userID):
     # Assuming you have a database connection pool
     connection = Database.get_connection()
 
@@ -56,13 +56,15 @@ def store_image_metadata(upload_timestamp, processing_time, file_size, file_type
                     upload_timestamp,
                     processing_time,
                     file_size,
-                    file_type
+                    file_type,
+                    user_id
+                    
                 )
-                VALUES (%s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s)
                 RETURNING id;
             """
             # Execute SQL query
-            cursor.execute(query, (upload_timestamp, processing_time, file_size, file_type))
+            cursor.execute(query, (upload_timestamp, processing_time, file_size, file_type,userID))
             
             # Commit the transaction
             connection.commit()
@@ -117,13 +119,14 @@ def store_processing_results(image_id, result):
             query = """
                     INSERT INTO public.processing_results (
                         image_id, detected_label, recognized_label, 
-                        detection_confidence_score, cropped_image,recognition_confidence_score
+                        detection_confidence_score, cropped_image,recognition_confidence_score,user_id
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s);
+                    VALUES (%s, %s, %s, %s, %s, %s, %s);
                 """
             cursor.execute(query, (
                     image_id, result['detected_label'], result['recognized_label'],
-                    result['detection_confidence_score'], result['cropped_image'], result['recognition_confidence_score']
+                    result['detection_confidence_score'], result['cropped_image'], 
+                    result['recognition_confidence_score'], result['user_id']
                 ))
             
             # Commit the transaction
@@ -139,17 +142,17 @@ def store_processing_results(image_id, result):
         Database.return_connection(connection)
     
 
-def store_error_in_db(error_message, timestamp, file_name, function_name):
+def store_error_in_db(error_message, timestamp, file_name, function_name,user_id):
     
     connection = Database.get_connection()
 
     try:
         with connection.cursor() as cursor:
             query = """
-                INSERT INTO public.error_logs (error_message, error_timestamp, file_name, function_name)
-                VALUES (%s, %s, %s, %s);
+                INSERT INTO public.error_logs (error_message, error_timestamp, file_name, function_name,user_id)
+                VALUES (%s, %s, %s, %s, %s);
             """
-            cursor.execute(query, (error_message, timestamp, file_name, function_name))
+            cursor.execute(query, (error_message, timestamp, file_name, function_name,user_id))
             
             # Commit the transaction
             connection.commit()
@@ -218,6 +221,31 @@ def get_user(email):
             """
             # Execute SQL query
             cursor.execute(query, (email,))
+            # Fetch one record
+            user = cursor.fetchone()
+            return user
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+    finally:
+        # Return the connection back to the pool
+        Database.return_connection(connection)
+
+  
+def get_sign(name):
+    # Get a database connection from the connection pool
+    connection = Database.get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            # Prepare SQL query
+            query = """
+                SELECT * FROM public.processing_results
+                WHERE name = %s;
+            """
+            # Execute SQL query
+            cursor.execute(query, (name,))
             # Fetch one record
             user = cursor.fetchone()
             return user

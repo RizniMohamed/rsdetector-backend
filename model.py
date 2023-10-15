@@ -7,7 +7,6 @@ from tensorflow.keras.metrics import Recall, Precision
 from ultralytics import YOLO
 from database import get_text,store_processing_results
 from io import BytesIO
-from logger import log_error
 
 # Constants
 YOLO_MODEL_PATH = './yolo.pt'
@@ -52,7 +51,7 @@ def recognition(crop_img):
     return LABELS[class_index],confidence_score
 
 
-def detection(frame,img_id):
+def detection(frame,img_id,userID):
     """Detect and recognize objects in the frame."""
     clahe_img = exposure.equalize_adapthist(frame, clip_limit=0.1)
     clahe_img_uint8 = (clahe_img * 255).astype('uint8')
@@ -77,11 +76,12 @@ def detection(frame,img_id):
                 cropped_image_bytes = io_buf.read()
                 
                 store_processing_results(img_id,{
-                    'detected_label': get_text(int(b.cls)),
-                    'recognized_label': get_text(label),
+                    'detected_label': int(b.cls),
+                    'recognized_label': int(label),
                     'detection_confidence_score': float(b.conf),
                     'recognition_confidence_score': float(confidence_score),
-                    'cropped_image': cropped_image_bytes
+                    'cropped_image': cropped_image_bytes,
+                    'user_id':userID
                 })
                 
             return " and ".join(label_texts)

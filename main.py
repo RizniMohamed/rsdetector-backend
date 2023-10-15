@@ -65,20 +65,49 @@ async def process(file: UploadFile,background_tasks: BackgroundTasks):
     return response
 
 @app.get("/V1/token")
-async def get_new_token():
-    token = create_new_token()
-    return {"access_token": token, "token_type": "bearer"}
-
-@app.post("/V1/secure-process")
-async def get_secure_data(file: UploadFile, background_tasks: BackgroundTasks, authorization: str = Header(None)):
+async def get_new_token(authorization: str = Header(None)):
+    
     try:
         if not authorization:
             raise HTTPException(status_code=403, detail="Not authenticated")
         token = authorization.split(" ")[1]
         try:
             decoded_token = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            access_token_expires = datetime.timedelta(minutes=5)
+
+            token = create_access_token(
+                data={"sub": decoded_token['sub']}, expires_delta=access_token_expires
+            )
+            return {"access_token": token, "token_type": "bearer"}
         except jwt.JWTError:
             raise HTTPException(status_code=403, detail="Invalid token")
+    
+      
+    except Exception as e:
+        if hasattr(e,'detail'):
+            error_message = f"Unexpected error: {str(e.detail)}"
+        else:
+            error_message = f"Unexpected error: {str(e)}"
+        log_error(error_message)
+        raise HTTPException(status_code=500, detail=error_message)  # Internal Server Error
+
+
+@app.post("/V1/secure-process")
+async def get_secure_data(file: UploadFile, background_tasks: BackgroundTasks, authorization: str = Header(None)):
+    userID= None
+    try:
+        if not authorization:
+            raise HTTPException(status_code=403, detail="Not authenticated")
+        token = authorization.split(" ")[1]
+        email= None
+        try:
+            decoded_token = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            email = decoded_token['sub']
+        except jwt.JWTError:
+            raise HTTPException(status_code=403, detail="Invalid token")
+        
+        user = get_user(email)
+        userID = user[0]
 
 
         file_size = file.size  # This gets the size of the file in bytes
@@ -91,11 +120,11 @@ async def get_secure_data(file: UploadFile, background_tasks: BackgroundTasks, a
         upload_timestamp = datetime.datetime.utcnow()
         file_type = file.content_type
 
-        image_id = store_image_metadata(upload_timestamp, None, file_size, file_type)
+        image_id = store_image_metadata(upload_timestamp, None, file_size, file_type,userID)
 
         start_time = datetime.datetime.now()
 
-        result = detection(img,image_id)
+        result = detection(img,image_id,userID)
         
         end_time = datetime.datetime.now()
         processing_time = end_time - start_time
@@ -139,7 +168,7 @@ async def login_for_access_token(form_data: UserIn):
     user = authenticate_user( form_data.email, form_data.password)
     if not user:
         return {"status": 1 , "message": "Username or Password mismtach"}
-    access_token_expires = datetime.timedelta(minutes=15)
+    access_token_expires = datetime.timedelta(minutes=5)
     access_token = create_access_token(
         data={"sub": user[2]}, expires_delta=access_token_expires
     )
